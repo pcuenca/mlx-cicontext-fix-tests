@@ -8,3 +8,5 @@
 | Xcode 26 · official   | macOS 26 / Swift 6.2 / 26 SDK   | `official/` | **[success](https://github.com/pcuenca/mlx-cicontext-fix-tests/actions/runs/27874400036/job/82491364422)** |
 
 The branch fixes builds on Xcode 16.3. When building with Xcode 16.3 / macOS 15 and the official repo, the CI passes when it detects the build failure.
+
+[CI Run](https://github.com/pcuenca/mlx-cicontext-fix-tests/actions/runs/27874400036)
