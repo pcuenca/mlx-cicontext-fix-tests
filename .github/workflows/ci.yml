@@ -1,0 +1,69 @@
+name: MLXVLM CIContext Sendable repro
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Xcode 16.3 · fork (expect success)"
+            os: macos-15
+            xcode: "16.3"
+            package: fork
+            expect: success
+          - name: "Xcode 16.3 · official (expect failure)"
+            os: macos-15
+            xcode: "16.3"
+            package: official
+            expect: failure
+          - name: "Xcode 26 · fork (expect success)"
+            os: macos-26
+            xcode: "26.0"
+            package: fork
+            expect: success
+          - name: "Xcode 26 · official (expect success)"
+            os: macos-26
+            xcode: "26.0"
+            package: official
+            expect: success
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Print toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Build ${{ matrix.package }} (expect ${{ matrix.expect }})
+        run: |
+          swift build --package-path ${{ matrix.package }} 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -eq 0 ]; then built=success; else built=failure; fi
+          echo "Build outcome: $built (expected: ${{ matrix.expect }})"
+
+          if [ "${{ matrix.expect }}" = "failure" ]; then
+            if [ "$built" = "success" ]; then
+              echo "::error::Expected the build to FAIL (CIContext Sendable), but it succeeded."
+              exit 1
+            fi
+            # Make sure it failed for the right reason
+            if grep -q "CIContext" build.log && grep -q "not concurrency-safe" build.log; then
+              echo "Build failed for the expected reason (CIContext is not Sendable). OK ✅"
+            else
+              echo "::error::Build failed, but not for the expected CIContext Sendable reason (see log)."
+              exit 1
+            fi
+          else
+            if [ "$built" = "failure" ]; then
+              echo "::error::Expected the build to SUCCEED, but it failed (see log)."
+              exit 1
+            fi
+            echo "Build succeeded as expected. OK ✅"
+          fi
